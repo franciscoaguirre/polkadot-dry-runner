@@ -16,6 +16,9 @@
     "vite-plugin-solid": "^2.8.2"
   },
   "dependencies": {
+    "@polkadot-api/descriptors": "file:.papi/descriptors",
+    "polkadot-api": "^1.2.0",
+    "pretty-print-json": "^3.0.2",
     "solid-js": "^1.8.11"
   }
 }
