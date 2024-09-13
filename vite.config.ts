@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite';
 import solidPlugin from 'vite-plugin-solid';
-import path from 'path';
 // import devtools from 'solid-devtools/vite';
 
 export default defineConfig({
@@ -17,13 +16,5 @@ export default defineConfig({
   },
   build: {
     target: 'esnext',
-  },
-  resolve: {
-    alias: [
-      {
-        find: /@polkadot-api\/descriptors/,
-        replacement: path.resolve(__dirname, 'node_modules', '@polkadot-api', 'descriptors'),
-      },
-    ],
   },
 });
