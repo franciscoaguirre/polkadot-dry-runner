@@ -17,5 +17,5 @@ export default defineConfig({
   build: {
     target: 'esnext',
   },
-  base: 'https://franciscoaguirre.github.io/polkadot-dry-runner',
+  base: './',
 });
