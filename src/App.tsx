@@ -3,14 +3,14 @@ import { createSignal, type Component, For } from 'solid-js';
 import { Binary, SS58String, Transaction } from 'polkadot-api';
 
 import styles from './App.module.css';
-import { DispatchRawOrigin, WestendRuntimeOriginCaller } from '@polkadot-api/descriptors';
+import { DispatchRawOrigin, WestendRuntimeOriginCaller, PolkadotRuntimeOriginCaller } from '@polkadot-api/descriptors';
 import { Chain, chains, locationToChain } from './clients';
 import { stringify } from './utils';
 
 type Origin = "root" | "signed" | SS58String;
 
 const App: Component = () => {
-  const [origin, setOrigin] = createSignal<WestendRuntimeOriginCaller>(WestendRuntimeOriginCaller.system(DispatchRawOrigin.Root()));
+  const [origin, setOrigin] = createSignal<WestendRuntimeOriginCaller | PolkadotRuntimeOriginCaller>(WestendRuntimeOriginCaller.system(DispatchRawOrigin.Root()));
   const [transaction, setTransaction] = createSignal<Transaction<any, any, any, any>>();
   const [errorMessage, setErrorMessage] = createSignal("");
   const [hops, setHops] = createSignal([]);
@@ -48,11 +48,21 @@ const App: Component = () => {
     const result = await chains[chain()].api.apis.DryRunApi.dry_run_call(origin()!, transaction()!.decodedCall);
     setHops((previousHops) => [...previousHops, [chain(), result]]);
     if (result.success && result.value.forwarded_xcms.length > 0) {
-      const [destinationLocation, remoteMessages] = result.value.forwarded_xcms[0];
-      const [destinationChain, origin] = locationToChain(chain(), destinationLocation)!;
-      const remoteDryRunResult = await chains[destinationChain].api.apis.DryRunApi.dry_run_xcm(origin, remoteMessages[0]);
-      console.dir({ result: remoteDryRunResult });
-      setHops((previousHops) => [...previousHops, [destinationChain, remoteDryRunResult]]);
+      console.dir({ forwarded_xcms: result.value.forwarded_xcms });
+      const [destinationLocation, remoteMessages] = result.value.forwarded_xcms.find(([destination, _]) => (
+        destination.type === 'V4' &&
+          destination.value.parents === 0 &&
+          destination.value.interior.type === 'X1' &&
+          destination.value.interior.value.type === 'Parachain' &&
+          destination.value.interior.value.value === 1000
+      ));
+      console.dir({ destinationLocation, remoteMessages });
+      if (remoteMessages.length > 0) {
+        const [destinationChain, origin] = locationToChain(chain(), destinationLocation)!;
+        const remoteDryRunResult = await chains[destinationChain].api.apis.DryRunApi.dry_run_xcm(origin, remoteMessages[0]);
+        console.dir({ result: remoteDryRunResult });
+        setHops((previousHops) => [...previousHops, [destinationChain, remoteDryRunResult]]);
+      }
     }
     setLoading(false);
   };
@@ -70,8 +80,10 @@ const App: Component = () => {
             <select onChange={(event) => handleChainChange(event.currentTarget.value as Chain)}>
               <option value="westend">Westend</option>
               <option value="westendAssetHub">Westend Asset Hub</option>
-              <option value="rococo">Rococo</option>
-              <option value="rococoAssetHub">Rococo Asset Hub</option>
+              <option value="polkadot">Polkadot</option>
+              <option value="polkadotAssetHub">Polkadot Asset Hub</option>
+              <option value="kusama">Kusama</option>
+              <option value="kusamaAssetHub">Kusama Asset Hub</option>
             </select>
           </label>
           <label>

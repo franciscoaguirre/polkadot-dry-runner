@@ -18,13 +18,13 @@
       "chain": "westend2_asset_hub",
       "metadata": ".papi/metadata/wndAh.scale"
     },
-    "roc": {
-      "chain": "rococo_v2_2",
-      "metadata": ".papi/metadata/roc.scale"
+    "dotAh": {
+      "chain": "polkadot_asset_hub",
+      "metadata": ".papi/metadata/dotAh.scale"
     },
-    "rocAh": {
-      "chain": "rococo_v2_2_asset_hub",
-      "metadata": ".papi/metadata/rocAh.scale"
+    "ksmAh": {
+      "chain": "ksmcc3_asset_hub",
+      "metadata": ".papi/metadata/ksmAh.scale"
     }
   }
 }
