@@ -25,6 +25,14 @@
     "ksmAh": {
       "chain": "ksmcc3_asset_hub",
       "metadata": ".papi/metadata/ksmAh.scale"
+    },
+    "dotCollectives": {
+      "chain": "polkadot_collectives",
+      "metadata": ".papi/metadata/dotCollectives.scale"
+    },
+    "dotPeople": {
+      "chain": "polkadot_people",
+      "metadata": ".papi/metadata/dotPeople.scale"
     }
   }
 }

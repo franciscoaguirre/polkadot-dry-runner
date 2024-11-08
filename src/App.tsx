@@ -3,7 +3,7 @@ import { createSignal, type Component, For } from 'solid-js';
 import { Binary, SS58String, Transaction } from 'polkadot-api';
 
 import styles from './App.module.css';
-import { DispatchRawOrigin, WestendRuntimeOriginCaller, PolkadotRuntimeOriginCaller } from '@polkadot-api/descriptors';
+import { DispatchRawOrigin, WestendRuntimeOriginCaller, PolkadotRuntimeOriginCaller, GovernanceOrigin } from '@polkadot-api/descriptors';
 import { Chain, chains, locationToChain } from './clients';
 import { stringify } from './utils';
 
@@ -19,12 +19,36 @@ const App: Component = () => {
   const [loading, setLoading] = createSignal(false);
 
   const handleOriginChange = (value: Origin) => {
-    if (value === "root") {
+    if (value === 'root') {
       setOrigin(WestendRuntimeOriginCaller.system(DispatchRawOrigin.Root()));
       setShowingAccountInput(false);
-    } else if (value === "signed") {
+    } else if (value === 'signed') {
       setOrigin(WestendRuntimeOriginCaller.system(DispatchRawOrigin.None()));
       setShowingAccountInput(true);
+    } else if (value === 'big-spender') {
+      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.BigSpender()));
+    } else if (value === 'big-tipper') {
+      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.BigTipper()));
+    } else if (value === 'fellowship-admin') {
+      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.FellowshipAdmin()));
+    } else if (value === 'general-admin') {
+      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.GeneralAdmin()));
+    } else if (value === 'medium-spender') {
+      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.MediumSpender()));
+    } else if (value === 'referendum-canceller') {
+      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.ReferendumCanceller()));
+    } else if (value === 'referendum-killer') {
+      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.ReferendumKiller()));
+    } else if (value === 'small-spender') {
+      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.SmallSpender()));
+    } else if (value === 'small-tipper') {
+      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.SmallTipper()));
+    } else if (value === 'staking-admin') {
+      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.StakingAdmin()));
+    } else if (value === 'treasurer') {
+      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.Treasurer()));
+    } else if (value === 'whitelisted-caller') {
+      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.WhitelistedCaller()));
     } else {
       setOrigin(WestendRuntimeOriginCaller.system(DispatchRawOrigin.Signed(value)))
     }
@@ -48,20 +72,27 @@ const App: Component = () => {
     const result = await chains[chain()].api.apis.DryRunApi.dry_run_call(origin()!, transaction()!.decodedCall);
     setHops((previousHops) => [...previousHops, [chain(), result]]);
     if (result.success && result.value.forwarded_xcms.length > 0) {
-      console.dir({ forwarded_xcms: result.value.forwarded_xcms });
-      const [destinationLocation, remoteMessages] = result.value.forwarded_xcms.find(([destination, _]) => (
-        destination.type === 'V4' &&
-          destination.value.parents === 0 &&
-          destination.value.interior.type === 'X1' &&
-          destination.value.interior.value.type === 'Parachain' &&
-          destination.value.interior.value.value === 1000
-      ));
-      console.dir({ destinationLocation, remoteMessages });
-      if (remoteMessages.length > 0) {
-        const [destinationChain, origin] = locationToChain(chain(), destinationLocation)!;
-        const remoteDryRunResult = await chains[destinationChain].api.apis.DryRunApi.dry_run_xcm(origin, remoteMessages[0]);
-        console.dir({ result: remoteDryRunResult });
-        setHops((previousHops) => [...previousHops, [destinationChain, remoteDryRunResult]]);
+      console.dir({ events: result.value.emitted_events });
+      const maybeSentDestination = result.value.emitted_events.find((event) => (
+        (event.type === 'XcmPallet' || event.type === 'PolkadotXcm') &&
+          event.value.type === 'Sent'
+      ))
+      if (maybeSentDestination !== undefined) {
+        const sentDestination = maybeSentDestination.value.value.destination;
+        const [destinationLocation, remoteMessages] = result.value.forwarded_xcms.find(([destination, _]) => (
+          destination.type === 'V4' &&
+            destination.value.parents === sentDestination.parents &&
+            destination.value.interior.type === sentDestination.interior.type &&
+            destination.value.interior.value.type === sentDestination.interior.value.type &&
+            destination.value.interior.value.value === sentDestination.interior.value.value
+        ));
+        console.dir({ destinationLocation, remoteMessages });
+        if (remoteMessages.length > 0) {
+          const [destinationChain, origin] = locationToChain(chain(), destinationLocation)!;
+          const remoteDryRunResult = await chains[destinationChain].api.apis.DryRunApi.dry_run_xcm(origin, remoteMessages[0]);
+          console.dir({ result: remoteDryRunResult });
+          setHops((previousHops) => [...previousHops, [destinationChain, remoteDryRunResult]]);
+        }
       }
     }
     setLoading(false);
@@ -78,12 +109,12 @@ const App: Component = () => {
           <label>
             Chain:
             <select onChange={(event) => handleChainChange(event.currentTarget.value as Chain)}>
-              <option value="westend">Westend</option>
-              <option value="westendAssetHub">Westend Asset Hub</option>
               <option value="polkadot">Polkadot</option>
               <option value="polkadotAssetHub">Polkadot Asset Hub</option>
-              <option value="kusama">Kusama</option>
-              <option value="kusamaAssetHub">Kusama Asset Hub</option>
+              <option value="polkadotCollectives">Polkadot Collectives</option>
+              <option value="polkadotPeople">Polkadot People</option>
+              <option value="westend">Westend</option>
+              <option value="westendAssetHub">Westend Asset Hub</option>
             </select>
           </label>
           <label>
@@ -91,6 +122,19 @@ const App: Component = () => {
             <select onChange={(event) => handleOriginChange(event.currentTarget.value as Origin)}>
               <option value="root">Root</option>
               <option value="signed">Signed</option>
+              <option value="general-admin">General Admin</option>
+              <option value="fellowship-admin">Fellowship Admin</option>
+              <option value="staking-admin">Staking Admin</option>
+              <option value="big-spender">Big Spender</option>
+              <option value="big-tipper">Big Tipper</option>
+              <option value="medium-spender">Medium Spender</option>
+              <option value="medium-tipper">Medium Tipper</option>
+              <option value="small-spender">Small Spender</option>
+              <option value="small-tipper">Small Tipper</option>
+              <option value="referendum-canceller">Referendum Canceller</option>
+              <option value="referendum-killer">Referendum Killer</option>
+              <option value="treasurer">Treasurer</option>
+              <option value="whitelisted-caller">Whitelisted Caller</option>
             </select>
             {showingAccountInput() && <input onChange={(event) => handleOriginChange(event.currentTarget.value as Origin)} type="text"></input>}
           </label>
