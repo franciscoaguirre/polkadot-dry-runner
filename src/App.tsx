@@ -15,7 +15,7 @@ const App: Component = () => {
   const [errorMessage, setErrorMessage] = createSignal("");
   const [hops, setHops] = createSignal([]);
   const [showingAccountInput, setShowingAccountInput] = createSignal(false);
-  const [chain, setChain] = createSignal<Chain>('westend');
+  const [chain, setChain] = createSignal<Chain>('polkadot');
   const [loading, setLoading] = createSignal(false);
 
   const handleOriginChange = (value: Origin) => {
