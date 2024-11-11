@@ -93,15 +93,23 @@ const stringToOrigin = (simpleOrigin: Origin): PolkadotRuntimeOriginCaller => {
   }
 }
 
+const camelToKebab = (camel: string): string => {
+  return camel.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+}
+
+const kebabToCamel = (kebab: string): string => {
+  return kebab.replace(/-([a-z])/g, (_, char) => char.toUpperCase());
+}
+
 const App: Component = () => {
-  const [searchParams, setSearchParams] = useSearchParams<{ chain: Chain, origin: string, callData: string }>();
+  const [searchParams, setSearchParams] = useSearchParams<{ chain: Chain, origin: string, call: string }>();
   const [origin, setOrigin] = createSignal<PolkadotRuntimeOriginCaller>(searchParams.origin !== undefined ? stringToOrigin(searchParams.origin) : PolkadotRuntimeOriginCaller.system(DispatchRawOrigin.Root()));
-  const [callData, setCallData] = createSignal(searchParams.callData ?? "");
+  const [callData, setCallData] = createSignal(searchParams.call ?? "");
   const [transaction, setTransaction] = createSignal<Transaction<any, any, any, any>>();
   const [errorMessage, setErrorMessage] = createSignal("");
   const [hops, setHops] = createSignal([]);
   const [showingAccountInput, setShowingAccountInput] = createSignal(false);
-  const [chain, setChain] = createSignal<Chain>(searchParams.chain ?? 'polkadot');
+  const [chain, setChain] = createSignal<Chain>(searchParams.chain ? kebabToCamel(searchParams.chain) : 'polkadot');
   const [loading, setLoading] = createSignal(false);
 
   onMount(async () => {
@@ -120,9 +128,9 @@ const App: Component = () => {
 
   createEffect(() => {
     setSearchParams({
-      chain: chain(),
+      chain: camelToKebab(chain()),
       origin: originToString(origin()),
-      callData: callData(),
+      call: callData(),
     });
   });
 
@@ -193,7 +201,7 @@ const App: Component = () => {
         <div class={styles.innerInputs}>
           <label>
             Chain:
-            <select onChange={(event) => handleChainChange(event.currentTarget.value as Chain)}>
+            <select onChange={(event) => handleChainChange(event.currentTarget.value as Chain)} value={chain()}>
               <option value="polkadot">Polkadot</option>
               <option value="polkadotAssetHub">Polkadot Asset Hub</option>
               <option value="polkadotCollectives">Polkadot Collectives</option>
