@@ -1,4 +1,5 @@
-import { createSignal, type Component, For } from 'solid-js';
+import { createSignal, type Component, For, createEffect, onMount } from 'solid-js';
+import { useSearchParams } from '@solidjs/router';
 
 import { Binary, SS58String, Transaction } from 'polkadot-api';
 
@@ -7,56 +8,140 @@ import { DispatchRawOrigin, WestendRuntimeOriginCaller, PolkadotRuntimeOriginCal
 import { Chain, chains, locationToChain } from './clients';
 import { stringify } from './utils';
 
-type Origin = "root" | "signed" | SS58String;
+type Origin =
+  'root' |
+  'signed' |
+  SS58String |
+  'big-spender' |
+  'big-tipper' |
+  'fellowship-admin' |
+  'general-admin' |
+  'medium-spender' |
+  'referendum-canceller' |
+  'referendum-killer' |
+  'small-spender' |
+  'small-tipper' |
+  'staking-admin' |
+  'treasurer' |
+  'whitelisted-caller';
+
+
+const originToString = (complexOrigin: PolkadotRuntimeOriginCaller): Origin | undefined => {
+  if (complexOrigin.type === 'system' && complexOrigin.value.type === 'Root') {
+    return 'root';
+  } else if (complexOrigin.type === 'system' && complexOrigin.value.type === 'Signed') {
+    return `signed-${complexOrigin.value.value}`;
+  } else if (complexOrigin.type === 'Origins' && complexOrigin.value.type === 'BigSpender') {
+    return 'big-spender';
+  } else if (complexOrigin.type === 'Origins' && complexOrigin.value.type === 'BigTipper') {
+    return 'big-tipper';
+  } else if (complexOrigin.type === 'Origins' && complexOrigin.value.type === 'FellowshipAdmin') {
+    return 'fellowship-admin';
+  } else if (complexOrigin.type === 'Origins' && complexOrigin.value.type === 'GeneralAdmin') {
+    return 'general-admin';
+  } else if (complexOrigin.type === 'Origins' && complexOrigin.value.type === 'MediumSpender') {
+    return 'medium-spender';
+  } else if (complexOrigin.type === 'Origins' && complexOrigin.value.type === 'ReferendumCanceller') {
+    return 'referendum-canceller';
+  } else if (complexOrigin.type === 'Origins' && complexOrigin.value.type === 'ReferendumKiller') {
+    return 'referendum-killer';
+  } else if (complexOrigin.type === 'Origins' && complexOrigin.value.type === 'SmallSpender') {
+    return 'small-spender';
+  } else if (complexOrigin.type === 'Origins' && complexOrigin.value.type === 'SmallTipper') {
+    return 'small-tipper';
+  } else if (complexOrigin.type === 'Origins' && complexOrigin.value.type === 'StakingAdmin') {
+    return 'staking-admin';
+  } else if (complexOrigin.type === 'Origins' && complexOrigin.value.type === 'Treasurer') {
+    return 'treasurer';
+  } else if (complexOrigin.type === 'Origins' && complexOrigin.value.type === 'WhitelistedCaller') {
+    return 'whitelisted-caller';
+  }
+}
+
+const stringToOrigin = (simpleOrigin: Origin): PolkadotRuntimeOriginCaller => {
+  if (simpleOrigin === 'root') {
+    return PolkadotRuntimeOriginCaller.system(DispatchRawOrigin.Root());
+  } else if (simpleOrigin === 'big-spender') {
+    return PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.BigSpender());
+  } else if (simpleOrigin === 'big-tipper') {
+    return PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.BigTipper());
+  } else if (simpleOrigin === 'fellowship-admin') {
+    return PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.FellowshipAdmin());
+  } else if (simpleOrigin === 'general-admin') {
+    return PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.GeneralAdmin());
+  } else if (simpleOrigin === 'medium-spender') {
+    return PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.MediumSpender());
+  } else if (simpleOrigin === 'referendum-canceller') {
+    return PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.ReferendumCanceller());
+  } else if (simpleOrigin === 'referendum-killer') {
+    return PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.ReferendumKiller());
+  } else if (simpleOrigin === 'small-spender') {
+    return PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.SmallSpender());
+  } else if (simpleOrigin === 'small-tipper') {
+    return PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.SmallTipper());
+  } else if (simpleOrigin === 'staking-admin') {
+    return PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.StakingAdmin());
+  } else if (simpleOrigin === 'treasurer') {
+    return PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.Treasurer());
+  } else if (simpleOrigin === 'whitelisted-caller') {
+    return PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.WhitelistedCaller());
+  } else if (simpleOrigin.includes('signed')) {
+    const [_, ss58] = simpleOrigin.split('-');
+    return PolkadotRuntimeOriginCaller.system(DispatchRawOrigin.Signed(ss58))
+  } else {
+    return PolkadotRuntimeOriginCaller.system(DispatchRawOrigin.None());
+  }
+}
 
 const App: Component = () => {
-  const [origin, setOrigin] = createSignal<WestendRuntimeOriginCaller | PolkadotRuntimeOriginCaller>(WestendRuntimeOriginCaller.system(DispatchRawOrigin.Root()));
+  const [searchParams, setSearchParams] = useSearchParams<{ chain: Chain, origin: string, callData: string }>();
+  const [origin, setOrigin] = createSignal<PolkadotRuntimeOriginCaller>(searchParams.origin !== undefined ? stringToOrigin(searchParams.origin) : PolkadotRuntimeOriginCaller.system(DispatchRawOrigin.Root()));
+  const [callData, setCallData] = createSignal(searchParams.callData ?? "");
   const [transaction, setTransaction] = createSignal<Transaction<any, any, any, any>>();
   const [errorMessage, setErrorMessage] = createSignal("");
   const [hops, setHops] = createSignal([]);
   const [showingAccountInput, setShowingAccountInput] = createSignal(false);
-  const [chain, setChain] = createSignal<Chain>('polkadot');
+  const [chain, setChain] = createSignal<Chain>(searchParams.chain ?? 'polkadot');
   const [loading, setLoading] = createSignal(false);
 
+  onMount(async () => {
+    if (callData() !== "") {
+      try {
+        setLoading(true);
+        const tx = await chains[chain()].api.txFromCallData(Binary.fromHex(callData()))
+        setTransaction(tx);
+      } catch {
+        setErrorMessage("Invalid call data");
+      } finally {
+        setLoading(false);
+      }
+    }
+  });
+
+  createEffect(() => {
+    setSearchParams({
+      chain: chain(),
+      origin: originToString(origin()),
+      callData: callData(),
+    });
+  });
+
   const handleOriginChange = (value: Origin) => {
-    if (value === 'root') {
-      setOrigin(WestendRuntimeOriginCaller.system(DispatchRawOrigin.Root()));
-      setShowingAccountInput(false);
-    } else if (value === 'signed') {
-      setOrigin(WestendRuntimeOriginCaller.system(DispatchRawOrigin.None()));
+    if (value.includes('signed')) {
+      const [_, ss58] = value.split('-');
+      console.log(ss58);
+      setOrigin(PolkadotRuntimeOriginCaller.system(DispatchRawOrigin.Signed(ss58)));
       setShowingAccountInput(true);
-    } else if (value === 'big-spender') {
-      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.BigSpender()));
-    } else if (value === 'big-tipper') {
-      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.BigTipper()));
-    } else if (value === 'fellowship-admin') {
-      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.FellowshipAdmin()));
-    } else if (value === 'general-admin') {
-      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.GeneralAdmin()));
-    } else if (value === 'medium-spender') {
-      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.MediumSpender()));
-    } else if (value === 'referendum-canceller') {
-      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.ReferendumCanceller()));
-    } else if (value === 'referendum-killer') {
-      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.ReferendumKiller()));
-    } else if (value === 'small-spender') {
-      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.SmallSpender()));
-    } else if (value === 'small-tipper') {
-      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.SmallTipper()));
-    } else if (value === 'staking-admin') {
-      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.StakingAdmin()));
-    } else if (value === 'treasurer') {
-      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.Treasurer()));
-    } else if (value === 'whitelisted-caller') {
-      setOrigin(PolkadotRuntimeOriginCaller.Origins(GovernanceOrigin.WhitelistedCaller()));
     } else {
-      setOrigin(WestendRuntimeOriginCaller.system(DispatchRawOrigin.Signed(value)))
+      setOrigin(stringToOrigin(value));
+      setShowingAccountInput(false);
     }
   };
 
   const handleEncodedCallChange = async (value: string) => {
     try {
       console.log('Chain:', chain());
+      setCallData(value);
       const tx = await chains[chain()].api.txFromCallData(Binary.fromHex(value))
       setTransaction(tx);
       setErrorMessage("");
@@ -119,7 +204,7 @@ const App: Component = () => {
           </label>
           <label>
             Origin:
-            <select onChange={(event) => handleOriginChange(event.currentTarget.value as Origin)}>
+            <select onChange={(event) => handleOriginChange(event.currentTarget.value as Origin)} value={originToString(origin())?.includes('signed') ? 'signed' : originToString(origin())}>
               <option value="root">Root</option>
               <option value="signed">Signed</option>
               <option value="general-admin">General Admin</option>
@@ -136,11 +221,11 @@ const App: Component = () => {
               <option value="treasurer">Treasurer</option>
               <option value="whitelisted-caller">Whitelisted Caller</option>
             </select>
-            {showingAccountInput() && <input onChange={(event) => handleOriginChange(event.currentTarget.value as Origin)} type="text"></input>}
+            {showingAccountInput() && <input onChange={(event) => handleOriginChange(`signed-${event.currentTarget.value}`)} type="text"></input>}
           </label>
           <label>
             Call data:
-            <input onChange={(event) => handleEncodedCallChange(event.currentTarget.value)} type="text"></input>
+            <input onChange={(event) => handleEncodedCallChange(event.currentTarget.value)} type="text" value={callData()}></input>
           </label>
           <small style="color: red">{errorMessage()}</small>
           <button onClick={handleDryRun}>Dry-run</button>

@@ -11,6 +11,9 @@ importers:
       '@polkadot-api/descriptors':
         specifier: file:.papi/descriptors
         version: file:.papi/descriptors(polkadot-api@1.2.0(postcss@8.4.33)(rxjs@7.8.1)(smoldot@2.0.30))
+      '@solidjs/router':
+        specifier: ^0.15.1
+        version: 0.15.1(solid-js@1.8.11)
       polkadot-api:
         specifier: ^1.2.0
         version: 1.2.0(postcss@8.4.33)(rxjs@7.8.1)(smoldot@2.0.30)
@@ -867,6 +870,11 @@ packages:
     resolution: {integrity: sha512-11ypVbp987XxETeRqY5Y3OmmTpm8/jZqJXRvo6AyqBthzkvvjEdReuUMU2yVb+pwWGxfZpWHZ6EUCcGXUMhfwg==}
     peerDependencies:
       solid-js: ^1.6.12
+
+  '@solidjs/router@0.15.1':
+    resolution: {integrity: sha512-lb5BRBqQqii/1dQCglx2K68xLkgu7QcrcajWKuuEx6FHTsK/hp5IgVhjy6RzPMLj+SFyrrRi/ldirCFNxtzh0Q==}
+    peerDependencies:
+      solid-js: ^1.8.6
 
   '@types/babel__core@7.20.5':
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
@@ -2543,6 +2551,10 @@ snapshots:
       solid-js: 1.8.11
 
   '@solid-primitives/utils@6.2.2(solid-js@1.8.11)':
+    dependencies:
+      solid-js: 1.8.11
+
+  '@solidjs/router@0.15.1(solid-js@1.8.11)':
     dependencies:
       solid-js: 1.8.11
 
