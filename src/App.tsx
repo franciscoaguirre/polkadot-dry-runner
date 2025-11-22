@@ -4,7 +4,7 @@ import { useSearchParams } from '@solidjs/router';
 import { Binary, SS58String, Transaction } from 'polkadot-api';
 
 import styles from './App.module.css';
-import { DispatchRawOrigin, WestendRuntimeOriginCaller, PolkadotRuntimeOriginCaller, GovernanceOrigin } from '@polkadot-api/descriptors';
+import { DispatchRawOrigin, PolkadotRuntimeOriginCaller, GovernanceOrigin } from '@polkadot-api/descriptors';
 import { Chain, chains, locationToChain } from './clients';
 import { stringify } from './utils';
 
@@ -162,7 +162,7 @@ const App: Component = () => {
     // Reset hops, new dry-run happening.
     setHops([]);
     setLoading(true);
-    const result = await chains[chain()].api.apis.DryRunApi.dry_run_call(origin()!, transaction()!.decodedCall);
+    const result = await chains[chain()].api.apis.DryRunApi.dry_run_call(origin()!, transaction()!.decodedCall, 5);
     setHops((previousHops) => [...previousHops, [chain(), result]]);
     if (result.success && result.value.forwarded_xcms.length > 0) {
       console.dir({ events: result.value.emitted_events });
